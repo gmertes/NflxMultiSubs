@@ -88,13 +88,13 @@ footer {
 }
 
 .settings-secondary-lang {
-  filter: blur(6px) grayscale(100%);
+  /*filter: blur(6px) grayscale(100%);*/
   transition: all 1s;
 }
 
 .settings-secondary-lang:hover {
-  cursor: not-allowed !important;
-  filter: blur(0);
+/*  cursor: not-allowed !important;
+  filter: blur(0);*/
 }
 
 .settings-layout div,
@@ -110,11 +110,10 @@ footer {
 }
 
 .settings-layout div:hover,
-.settings-layout div.active
-/*
+.settings-layout div.active,
 .settings-secondary-lang div:hover,
 .settings-secondary-lang div.active
-*/
+
 {
   color: hsl(0, 70%, 50%);
   cursor: pointer;
@@ -126,21 +125,17 @@ footer {
 }
 
 .settings-layout svg:hover rect,
-.settings-layout div.active svg rect
-/*
+.settings-layout div.active svg rect,
 .settings-secondary-lang svg:hover rect,
 .settings-secondary-lang svg:hover rect
-*/
 {
   stroke: hsl(0, 70%, 50%);
 }
 
 .settings-layout svg:hover line,
-.settings-layout div.active svg line
-/*
+.settings-layout div.active svg line,
 .settings-secondary-lang svg:hover line,
 .settings-secondary-lang div.active svg line
-*/
 {
   stroke: hsl(0, 80%, 50%);
 }
