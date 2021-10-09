@@ -127,7 +127,7 @@ footer {
 .settings-layout svg:hover rect,
 .settings-layout div.active svg rect,
 .settings-secondary-lang svg:hover rect,
-.settings-secondary-lang svg:hover rect
+.settings-secondary-lang div.active svg rect
 {
   stroke: hsl(0, 70%, 50%);
 }

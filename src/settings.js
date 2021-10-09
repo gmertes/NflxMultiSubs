@@ -69,6 +69,18 @@ const secondarySizePresets = [
   },
 ];
 
+const secondaryLanguagePresets = [
+  {
+    secondaryLanguageMode: 'disabled',
+  },
+  {
+    secondaryLanguageMode: 'audio',
+  },
+  {
+    secondaryLanguageMode: 'last',
+  }
+];
+
 
 function uploadSettings() {
   port.postMessage({ settings: settings });
@@ -109,7 +121,12 @@ function renderActiveSettings() {
   }
 
   // secondary language
-  // TODO
+  const secondaryLanguageId = secondaryLanguagePresets.findIndex(k => (k.secondaryLanguageMode === settings.secondaryLanguageMode));
+  console.log(secondaryLanguageId)
+  if (secondaryLanguageId !== -1) {
+    elem = document.querySelector(`.settings-secondary-lang > div[data-id="${secondaryLanguageId}"]`);
+    elem && elem.classList.add('active');
+  }
 }
 
 function updateLayout(layoutId) {
@@ -132,6 +149,14 @@ function updateSecondaryFontSize(fontSizeId) {
   if (fontSizeId < 0 || fontSizeId >= secondarySizePresets.length) return;
 
   settings = Object.assign(settings, secondarySizePresets[fontSizeId]);
+  uploadSettings();
+  renderActiveSettings();
+}
+
+function updateSecondaryLanguage(secondaryLanguage){
+  if (secondaryLanguage < 0 || secondaryLanguage >= secondaryLanguagePresets.length) return;
+
+  settings = Object.assign(settings, secondaryLanguagePresets[secondaryLanguage]);
   uploadSettings();
   renderActiveSettings();
 }
@@ -167,6 +192,12 @@ window.addEventListener('load', evt => {
   [].forEach.call(secondarySizes, div => {
     const fontSizeId = parseInt(div.getAttribute('data-id'));
     div.addEventListener('click', evt => updateSecondaryFontSize(fontSizeId), false);
+  });
+
+  const secondaryLanguage = document.querySelectorAll('.settings-secondary-lang > div');
+  [].forEach.call(secondaryLanguage, div => {
+    const languageId = parseInt(div.getAttribute('data-id'));
+    div.addEventListener('click', evt => updateSecondaryLanguage(languageId), false);
   });
 
   const btnReset = document.getElementById('btnReset');
