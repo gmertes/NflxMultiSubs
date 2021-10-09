@@ -61,6 +61,37 @@ let gMsgPort, gRendererLoop;
 let gVideoRatio = 1080 / 1920;
 let gRenderOptions = Object.assign({}, kDefaultSettings);
 
+(() => {
+  // connect with background script immediately so we can capture settings before playback (used for language mode)
+  if (BROWSER === 'chrome') {
+    if (gMsgPort) return;
+    try {
+      const extensionId = window.__nflxMultiSubsExtId;
+      gMsgPort = chrome.runtime.connect(extensionId);
+      console.log(`Linked: ${extensionId}`);
+
+      gMsgPort.onMessage.addListener(msg => {
+        if (!msg.settings) return;
+        gRenderOptions = Object.assign({}, msg.settings);
+        gRendererLoop && gRendererLoop.setRenderDirty();
+      });
+    } catch (err) {
+      console.warn('Error: cannot talk to background,', err);
+    }
+    return;
+  }
+
+  // Firefox
+  try {
+    window.postMessage({
+      namespace: 'nflxmultisubs',
+      action: 'connect'
+    }, '*');
+  } catch (err) {
+    console.warn('Error: cannot talk to background,', err);
+  }
+})();
+
 ////////////////////////////////////////////////////////////////////////////////
 
 class SubtitleBase {
@@ -505,7 +536,11 @@ activateSubtitle = id => {
   const sub = gSubtitles[id];
   if (sub) {
     gSubtitles.forEach(sub => sub.deactivate());
-    sub.activate().then(() => gSubtitleMenu && gSubtitleMenu.render());
+    sub.activate().then(() => {
+      gSubtitleMenu && gSubtitleMenu.render()
+      gRenderOptions.secondaryLanguageLastUsed = sub.bcp47;
+      gMsgPort.postMessage({ settings: gRenderOptions });
+    });
   }
   gSubtitleMenu && gSubtitleMenu.render();
 };
@@ -700,7 +735,7 @@ class RendererLoop {
   start() {
     this.isRunning = true;
     window.requestAnimationFrame(this.loop.bind(this));
-    this._connect();
+    //this._connect();
   }
 
   stop() {
@@ -1072,20 +1107,44 @@ class NflxMultiSubsManager {
           gSubtitleMenu = new SubtitleMenu();
           gSubtitleMenu.render();
 
-          // select subtitle to match the default audio track
-          try {
-            const defaultAudioId = manifest.defaultTrackOrderList[0].audioTrackId;
-            const defaultAudioTrack = manifest.audio_tracks.find(t => t.id == defaultAudioId);
-            const defaultAudioLanguage = defaultAudioTrack.language;
-            console.log(`Default audio track language: ${defaultAudioLanguage}`);
-            const autoSubtitleId = gSubtitles.findIndex(t => t.bcp47 == defaultAudioLanguage);
-            if (autoSubtitleId >= 0) {
-              console.log(`Subtitle #${autoSubtitleId} auto-enabled to match audio`);
-              activateSubtitle(autoSubtitleId);
-            }
-          }
-          catch (err) {
-            console.error('Default audio track not found, ', err);
+          // select subtitle based on language settings
+          console.log('Language mode: ', gRenderOptions.secondaryLanguageMode);
+          switch(String(gRenderOptions.secondaryLanguageMode)){
+            case 'disabled':
+              console.log('Manifest loaded, but mode is set to disabled.');
+              break;
+            case 'audio':
+              try {
+                const defaultAudioId = manifest.defaultTrackOrderList[0].audioTrackId;
+                const defaultAudioTrack = manifest.audio_tracks.find(t => t.id == defaultAudioId);
+                const defaultAudioLanguage = defaultAudioTrack.language;
+                console.log(`Default audio track language: ${defaultAudioLanguage}`);
+                const autoSubtitleId = gSubtitles.findIndex(t => t.bcp47 == defaultAudioLanguage);
+                if (autoSubtitleId >= 0) {
+                  console.log(`Subtitle #${autoSubtitleId} auto-enabled to match audio`);
+                  activateSubtitle(autoSubtitleId);
+                }
+              }
+              catch (err) {
+                console.error('Default audio track not found, ', err);
+              }
+              break;
+            case 'last':
+              if (gRenderOptions.secondaryLanguageLastUsed){
+                console.log('Activating last sub language', gRenderOptions.secondaryLanguageLastUsed)
+                try{
+                  const lastSubtitleId = gSubtitles.findIndex(t => t.bcp47 == gRenderOptions.secondaryLanguageLastUsed);
+                  if (lastSubtitleId >= 0) {
+                    console.log(`Subtitle #${lastSubtitleId} enabled`);
+                    activateSubtitle(lastSubtitleId);
+                  }
+                } catch (err){
+                  console.error('Error activating last sub language, ', err);
+                }
+              }else{
+                console.log('Last used language is empty, subs disabled.');
+              }
+              break;
           }
 
           // retrieve video ratio

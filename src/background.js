@@ -78,6 +78,26 @@ function handleExternalConnection(port) {
 
   port.postMessage({ settings: gSettings });
 
+  port.onMessage.addListener(msg => {
+    console.log('Received from videoplayer: settings=', msg.settings);
+    if (msg.settings) {
+      let settings = Object.assign({}, gSettings);
+      settings = Object.assign(settings, msg.settings);
+      if (!validateSettings(settings)) {
+        gSettings = Object.assign({}, kDefaultSettings);
+        port.postMessage({ settings: gSettings });
+      }
+      else {
+        gSettings = settings;
+      }
+    }
+    else {
+
+    }
+    saveSettings();
+    dispatchSettings();
+  });
+
   port.onDisconnect.addListener(() => {
     delete gExtPorts[tabId];
     desaturateActionIconForTab(tabId);
