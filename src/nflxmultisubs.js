@@ -735,13 +735,15 @@ class RendererLoop {
   start() {
     this.isRunning = true;
     window.requestAnimationFrame(this.loop.bind(this));
+    gMsgPort.postMessage({ startPlayback: 1 });
     //this._connect();
   }
 
   stop() {
     this.isRunning = false;
     this._clearSecondarySubtitles();
-    this._disconnect();
+    gMsgPort.postMessage({ stopPlayback: 1 });
+    //this._disconnect();
   }
 
   loop() {
@@ -766,6 +768,7 @@ class RendererLoop {
 
     // this script may be loaded while user's at the movie list page,
     // thus if there's no video playing, we can end the renderer loop
+    // FIXME: doesn't trigger when videoplayer is closed
     if (!this.videoElem && !/netflix\.com\/watch/i.test(window.location.href)) {
       this.stop();
       return;
