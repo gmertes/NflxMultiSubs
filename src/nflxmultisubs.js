@@ -1114,7 +1114,7 @@ class NflxMultiSubsManager {
           console.log('Language mode: ', gRenderOptions.secondaryLanguageMode);
           switch(String(gRenderOptions.secondaryLanguageMode)){
             case 'disabled':
-              console.log('Manifest loaded, but mode is set to disabled.');
+              console.log('Subs disabled.');
               break;
             case 'audio':
               try {
@@ -1126,6 +1126,8 @@ class NflxMultiSubsManager {
                 if (autoSubtitleId >= 0) {
                   console.log(`Subtitle #${autoSubtitleId} auto-enabled to match audio`);
                   activateSubtitle(autoSubtitleId);
+                }else{
+                  console.log(defaultAudioLanguage + ' subs not available.');
                 }
               }
               catch (err) {
@@ -1140,6 +1142,8 @@ class NflxMultiSubsManager {
                   if (lastSubtitleId >= 0) {
                     console.log(`Subtitle #${lastSubtitleId} enabled`);
                     activateSubtitle(lastSubtitleId);
+                  }else{
+                    console.log(gRenderOptions.secondaryLanguageLastUsed + ' subs not available.');
                   }
                 } catch (err){
                   console.error('Error activating last sub language, ', err);
