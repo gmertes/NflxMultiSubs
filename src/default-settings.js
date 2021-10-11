@@ -10,6 +10,7 @@ const kDefaultSettings = {
   secondaryTextScale: 1.0,
   secondaryTextStroke: 2.0,
   secondaryTextOpacity: 0.85,
+  prefLang : "None",
 };
 
 module.exports = kDefaultSettings;

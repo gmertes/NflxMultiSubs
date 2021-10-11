@@ -446,6 +446,7 @@ class SubtitleMenu {
       } else {
         item.innerHTML = `<div><div class="ltr-1mjiiew">${sub.lang}</div></div>`;
         item.addEventListener('click', () => {
+          gRenderOptions.prefLang = sub.bcp47;
           activateSubtitle(id);
         });
       }
@@ -1078,8 +1079,14 @@ class NflxMultiSubsManager {
             const defaultAudioTrack = manifest.audio_tracks.find(t => t.id == defaultAudioId);
             const defaultAudioLanguage = defaultAudioTrack.language;
             console.log(`Default audio track language: ${defaultAudioLanguage}`);
+            console.log(`Preferred Subtitles language: ${gRenderOptions.prefLang}`);
             const autoSubtitleId = gSubtitles.findIndex(t => t.bcp47 == defaultAudioLanguage);
-            if (autoSubtitleId >= 0) {
+            const prefSubtitleId = gSubtitles.findIndex(t => t.bcp47 == gRenderOptions.prefLang);
+            if (prefSubtitleId >= 0) {
+              console.log(`Subtitle #${prefSubtitleId} enabled to preferred language`);
+              activateSubtitle(prefSubtitleId);
+            }
+            else if (autoSubtitleId >= 0) {
               console.log(`Subtitle #${autoSubtitleId} auto-enabled to match audio`);
               activateSubtitle(autoSubtitleId);
             }
