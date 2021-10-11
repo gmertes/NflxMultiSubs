@@ -1116,6 +1116,7 @@ class NflxMultiSubsManager {
             case 'disabled':
               console.log('Subs disabled.');
               break;
+            default:
             case 'audio':
               try {
                 const defaultAudioId = manifest.defaultTrackOrderList[0].audioTrackId;
