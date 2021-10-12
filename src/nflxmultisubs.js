@@ -852,7 +852,7 @@ class RendererLoop {
     // because there are multiple instance of the SVG and they're switched
     // when the langauge of primary subtitles is switched.
     const primaryImageSubSvg = document.querySelector(
-      '.image-based-timed-text svg'
+      '.image-based-subtitles svg'
     );
     if (primaryImageSubSvg) {
       this.primaryImageTransformer.transform(primaryImageSubSvg, active, dirty);
