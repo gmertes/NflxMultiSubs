@@ -632,7 +632,10 @@ class PrimaryTextTransformer {
       parentNode = wrapper;
     }
 
-    const container = divElem.querySelector('.player-timedtext-text-container');
+    const containers = divElem.querySelectorAll('.player-timedtext-text-container');
+    // select all elements to check if there are more than one later
+    // but for now we only need the first one to attach our style
+    const container = containers.item(0);
     if (!container) return;
 
     const textContent = container.textContent;
@@ -671,14 +674,20 @@ class PrimaryTextTransformer {
     // does not move automatically when the navs are active
     newTop += controlsActive ? -120 : 0;
 
-    style.textContent =
-      styleText +
-      '\n' +
-      `
+    if (containers.length == 1){
+      style.textContent +=
+          styleText +
+          '\n' +
+          `
       .player-timedtext-text-container {
         top: ${newTop}px !important;
         left: ${newLeft}px !important;
       }`;
+    }else{
+      // Don't change position when there are multiple subtitle boxes.
+      // Changing 'left:' will cause overlap.
+      // This can happen for subs that have speaker-placed captioning enabled (subs that are positioned over the speaker)
+    }
   }
 }
 
