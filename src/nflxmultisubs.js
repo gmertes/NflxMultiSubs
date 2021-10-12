@@ -595,10 +595,20 @@ class PrimaryImageTransformer {
 
         const [newWidth, newHeight] = [width * scale, height * scale];
         const newLeft = left + 0.5 * (width - newWidth);
-        const newTop =
+
+        // large scale multi-line subs sometimes fall outside of the screen when they are placed at the top,
+        // caused by newTop becoming negative (because newHeight is based on the subs scale)
+        // subtracting newHeight/2 prevents this and makes it so that multiline subs are displayed at roughly
+        // the same location as the single line subs when this happens
+        var newTop =
           top <= centerLine
-            ? upperBaseline - newHeight
+            ? (upperBaseline - newHeight <= 0 ? upperBaseline - newHeight/2 : upperBaseline - newHeight)
             : lowerBaseline - newHeight;
+
+        // if it somehow still ends up negative just hard-constrain it
+        // (we arbitrarily choose 10 to give it some space from the screen edge)
+        newTop = (newTop <= 0) ? 10 : newTop;
+
         img.setAttributeNS(null, 'width', newWidth);
         img.setAttributeNS(null, 'height', newHeight);
         img.setAttributeNS(null, 'x', newLeft);
