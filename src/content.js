@@ -50,4 +50,21 @@ window.addEventListener('message', evt => {
       gMsgPort.disconnect();
     }
   }
+  else if (evt.data.action === 'update-settings') {
+    if (gMsgPort) {
+      if (evt.data.settings) {
+        gMsgPort.postMessage({settings: evt.data.settings});
+      }
+    }
+  }
+  else if (evt.data.action === 'startPlayback') {
+    if (gMsgPort) {
+        gMsgPort.postMessage({ startPlayback: 1 });
+    }
+  }
+  else if (evt.data.action === 'stopPlayback') {
+    if (gMsgPort) {
+        gMsgPort.postMessage({ stopPlayback: 1 });
+    }
+  }
 }, false);

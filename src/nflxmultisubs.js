@@ -81,14 +81,32 @@ let gRenderOptions = Object.assign({}, kDefaultSettings);
     return;
   }
 
-  // Firefox
-  try {
-    window.postMessage({
-      namespace: 'nflxmultisubs',
-      action: 'connect'
-    }, '*');
-  } catch (err) {
-    console.warn('Error: cannot talk to background,', err);
+  // Firefox: this injected agent cannot talk to extension directly, thus the
+  // connection (for applying settings) is relayed by our content script through
+  // window.postMessage().
+
+  if (BROWSER === 'firefox') {
+    window.addEventListener(
+        'message',
+        evt => {
+          if (!evt.data || evt.data.namespace !== 'nflxmultisubs') return;
+
+          if (evt.data.action === 'apply-settings' && evt.data.settings) {
+            gRenderOptions = Object.assign({}, evt.data.settings);
+            gRendererLoop && gRendererLoop.setRenderDirty();
+          }
+        },
+        false
+    );
+
+    try {
+      window.postMessage({
+        namespace: 'nflxmultisubs',
+        action: 'connect'
+      }, '*');
+    } catch (err) {
+      console.warn('Error: cannot talk to background,', err);
+    }
   }
 })();
 
@@ -539,8 +557,23 @@ activateSubtitle = id => {
     sub.activate().then(() => {
       gSubtitleMenu && gSubtitleMenu.render()
       gRenderOptions.secondaryLanguageLastUsed = sub.bcp47;
-      gMsgPort.postMessage({ settings: gRenderOptions });
+      if (BROWSER === 'chrome') {
+        if (gMsgPort)
+          gMsgPort.postMessage({settings: gRenderOptions});
+      }else {
+        // Firefox
+        try {
+          window.postMessage({
+            namespace: 'nflxmultisubs',
+            action: 'update-settings',
+            settings: gRenderOptions
+          }, '*');
+        } catch (err) {
+          console.warn('Error: cannot talk to background,', err);
+        }
+      }
     });
+
   }
   gSubtitleMenu && gSubtitleMenu.render();
 };
@@ -735,14 +768,40 @@ class RendererLoop {
   start() {
     this.isRunning = true;
     window.requestAnimationFrame(this.loop.bind(this));
-    gMsgPort.postMessage({ startPlayback: 1 });
+    if (BROWSER === 'chrome') {
+      if (gMsgPort)
+        gMsgPort.postMessage({ startPlayback: 1 });
+    }else {
+      // Firefox
+      try {
+        window.postMessage({
+          namespace: 'nflxmultisubs',
+          action: 'startPlayback'
+        }, '*');
+      } catch (err) {
+        console.warn('Error: cannot talk to background,', err);
+      }
+    }
     //this._connect();
   }
 
   stop() {
     this.isRunning = false;
     this._clearSecondarySubtitles();
-    gMsgPort.postMessage({ stopPlayback: 1 });
+    if (BROWSER === 'chrome') {
+      if (gMsgPort)
+        gMsgPort.postMessage({ stopPlayback: 1 });
+    }else {
+      // Firefox
+      try {
+        window.postMessage({
+          namespace: 'nflxmultisubs',
+          action: 'stopPlayback'
+        }, '*');
+      } catch (err) {
+        console.warn('Error: cannot talk to background,', err);
+      }
+    }
     //this._disconnect();
   }
 
@@ -1216,24 +1275,6 @@ window.__NflxMultiSubs = nflxMultiSubsManager;  // interface between us and the 
 
 // =============================================================================
 
-// Firefox: this injected agent cannot talk to extension directly, thus the
-// connection (for applying settings) is relayed by our content script through
-// window.postMessage().
-
-if (BROWSER === 'firefox') {
-  window.addEventListener(
-    'message',
-    evt => {
-      if (!evt.data || evt.data.namespace !== 'nflxmultisubs') return;
-
-      if (evt.data.action === 'apply-settings' && evt.data.settings) {
-        gRenderOptions = Object.assign({}, evt.data.settings);
-        gRendererLoop && gRendererLoop.setRenderDirty();
-      }
-    },
-    false
-  );
-}
 
 // =============================================================================
 
