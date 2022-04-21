@@ -112,6 +112,9 @@ function renderActiveSettings() {
     elem = document.querySelector(`.settings-primary-font-size div.font-size[data-id="${primaryFontSizeId}"]`);
     elem && elem.classList.add('active');
   }
+  
+  // primary font color
+  document.getElementById('primary-color').value = settings.primaryTextColor || "#ffffff";
 
   // secondary font size
   const secondaryFontSizeId = secondarySizePresets.findIndex(k => (k.secondaryImageScale === settings.secondaryImageScale));
@@ -119,6 +122,9 @@ function renderActiveSettings() {
     elem = document.querySelector(`.settings-secondary-font-size div.font-size[data-id="${secondaryFontSizeId}"]`);
     elem && elem.classList.add('active');
   }
+
+  // secondary font color
+  document.getElementById('secondary-color').value = settings.secondaryTextColor || "#ffffff";
 
   // secondary language
   const secondaryLanguageId = secondaryLanguagePresets.findIndex(k => (k.secondaryLanguageMode === settings.secondaryLanguageMode));
@@ -151,6 +157,18 @@ function updateSecondaryFontSize(fontSizeId) {
   if (fontSizeId < 0 || fontSizeId >= secondarySizePresets.length) return;
 
   settings = Object.assign(settings, secondarySizePresets[fontSizeId]);
+  uploadSettings();
+  renderActiveSettings();
+}
+
+function updatePrimaryColor(color) {
+  settings = Object.assign(settings, {primaryTextColor: color});
+  uploadSettings();
+  renderActiveSettings();
+}
+
+function updateSecondaryColor(color) {
+  settings = Object.assign(settings, {secondaryTextColor: color});
   uploadSettings();
   renderActiveSettings();
 }
@@ -195,6 +213,16 @@ window.addEventListener('load', evt => {
     const fontSizeId = parseInt(div.getAttribute('data-id'));
     div.addEventListener('click', evt => updateSecondaryFontSize(fontSizeId), false);
   });
+
+  const primaryColorField = document.getElementById('primary-color')
+  primaryColorField.onchange = evt => {
+    updatePrimaryColor(evt.target.value)
+  }
+
+  const secondaryColorField = document.getElementById('secondary-color')
+  secondaryColorField.onchange = evt => {
+    updateSecondaryColor(evt.target.value, false)
+  }
 
   const secondaryLanguage = document.querySelectorAll('.settings-secondary-lang > div');
   [].forEach.call(secondaryLanguage, div => {
