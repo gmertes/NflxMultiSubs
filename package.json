@@ -2,7 +2,7 @@
   "name": "NflxMultiSubs",
   "description": "Bilingual Subtitles for Netflix (fixed)",
   "author": "Dan Chen, Gert Mertes",
-  "version": "2.2.9",
+  "version": "2.2.10",
   "license": "MIT",
   "private": true,
   "scripts": {

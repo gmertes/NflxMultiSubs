@@ -249,7 +249,8 @@ class TextSubtitle extends SubtitleBase {
   _render(lines, options) {
     // `em` as font size was not so good -- some other extensions change the em (?)
     // these magic numbers looks good on my screen XD
-    const fontSize = Math.sqrt(this.extentWidth / 1600) * 28;
+    // const fontSize = Math.sqrt(this.extentWidth / 1600) * 28;
+    const fontSize = Math.ceil(this.extentHeight / 30);
 
     const textContent = lines.map(line => line.text).join('\n');
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -531,7 +532,11 @@ class SubtitleMenu {
       listElem.classList.add(this.style.ul);
       listElem.appendChild(item);
     });
-    this.elem.appendChild(listElem);
+    const listWrapper = document.createElement('div');
+    listWrapper.style.overflowY = 'auto';
+    listWrapper.style.overflowX = 'hidden';
+    listWrapper.appendChild(listElem);
+    this.elem.appendChild(listWrapper);
   }
 }
 
@@ -766,10 +771,10 @@ class PrimaryTextTransformer {
     const style = parentNode.querySelector('style');
     if (!style) return;
 
-    const textSpan = container.querySelector('span');
+    const textSpan = Array.from(container.querySelectorAll('span'));
     if (!textSpan) return;
 
-    const fontSize = parseInt(textSpan.style.fontSize);
+    const fontSize = parseInt(textSpan.find(t => t.style.fontSize).style.fontSize);
     if (!fontSize) return;
 
     const options = gRenderOptions;

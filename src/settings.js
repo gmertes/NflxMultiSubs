@@ -64,8 +64,8 @@ const secondarySizePresets = [
     secondaryTextScale: 1.10,
   },
   { // x-large
-    secondaryImageScale: 0.70,
-    secondaryTextScale: 1.20,
+    secondaryImageScale: 0.80,
+    secondaryTextScale: 1.30,
   },
 ];
 
