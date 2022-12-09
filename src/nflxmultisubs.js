@@ -22,6 +22,20 @@ const hookJsonParseAndAddCallback = function(_window) {
 hookJsonParseAndAddCallback(window);
 
 
+// Hook JSON.stringify() to intercept and modify manifest requests
+const hookJsonStringify = function(_window) {
+  const _stringify = JSON.stringify;
+  _window.JSON.stringify = (...args) => {
+    if (args[0] && args[0].url === 'manifest') {
+      args[0].Fb.showAllSubDubTracks = true;
+    }
+    const result = _stringify.call(JSON, ...args);
+    return result;
+  };
+};
+hookJsonStringify(window);
+
+
 // hook `history.pushState()` as there is not "pushstate" event in DOM API
 // Because Netflix preload manifests when the user hovers mouse over movies on index page,
 // our .updateManifest() won't be trigger after user clicks a movie to start watching (they must reload the player page)
