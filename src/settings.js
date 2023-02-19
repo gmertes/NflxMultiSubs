@@ -33,7 +33,7 @@ port.onMessage.addListener((msg) => {
 const layoutPresets = [
   { // compact
     upperBaselinePos: 0.20,
-    lowerBaselinePos: 0.80,
+    lowerBaselinePos: 0.75,
   },
   { // moderate (default)
     upperBaselinePos: 0.15,
