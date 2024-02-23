@@ -175,7 +175,7 @@ class SubtitleBase {
     console.debug('Selecting fastest server, candidates: ',
       this.urls.map(u => u.substr(0, 24)));
 
-    return Promise.race(
+    return Promise.any(
       this.urls.map(url => fetch(new Request(url), {method: 'HEAD'}))
     ).then(r => {
       const url = r.url;
