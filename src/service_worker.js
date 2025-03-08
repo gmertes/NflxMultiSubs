@@ -1,9 +1,4 @@
 const kDefaultSettings = require('./default-settings');
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-
 let gSettings = Object.assign({}, kDefaultSettings);
 
 // return true if valid; otherwise return false
@@ -11,7 +6,6 @@ function validateSettings(settings) {
   const keys = Object.keys(kDefaultSettings);
   return keys.every(key => (key in settings));
 }
-
 
 chrome.storage.local.get(['settings'], (result) => {
   console.log('Loaded: settings=', result.settings);
@@ -32,45 +26,64 @@ function saveSettings() {
   });
 }
 
-// ----------------------------------------------------------------------------
-
 function saturateActionIconForTab(tabId) {
-  chrome.browserAction.setIcon({
-    tabId: tabId,
-    path: {
-      '16': 'icon16.png',
-      '32': 'icon32.png',
-    },
-  });
+  try {
+    // v2
+    chrome.browserAction.setIcon({
+      tabId: tabId,
+      path: {
+        '16': 'icon16.png',
+        '32': 'icon32.png',
+      },
+    });
+  } catch (err) {
+    // v3
+    chrome.action.setIcon({
+      path: {
+        '16': 'icon16.png',
+        '32': 'icon32.png',
+      },
+    });
+  }
 }
 
 function desaturateActionIconForTab(tabId) {
-  chrome.browserAction.setIcon({
-    tabId: tabId,
-    path: {
-      '16': 'icon16-gray.png',
-      '32': 'icon32-gray.png',
-    },
-  });
+  try {
+    // v2
+    chrome.browserAction.setIcon({
+      tabId: tabId,
+      path: {
+        '16': 'icon16-gray.png',
+        '32': 'icon32-gray.png',
+      },
+    });
+  } catch (err) {
+    // v3
+    chrome.action.setIcon({
+      path: {
+        '16': 'icon16-gray.png',
+        '32': 'icon32-gray.png',
+      },
+    });
+  }
 }
 
-
-// -----------------------------------------------------------------------------
-
-
+// TODO: revisit this logic. 
+// The port is ephemeral in manifest v3, so keeping a map of ports is probably not useful.
 let gExtPorts = {}; // tabId -> msgPort; for config dispatching
 function dispatchSettings() {
-  const keys = Object.keys(gExtPorts);
-  keys.map(k => gExtPorts[k]).forEach(port => {
-    try {
-      port.postMessage({ settings: gSettings });
-    }
-    catch (err) {
-      console.error('Error: cannot dispatch settings,', err);
-    }
-  });
+  try {
+    const keys = Object.keys(gExtPorts);
+    keys.map(k => gExtPorts[k]).forEach(port => {
+      try {
+        port.postMessage({ settings: gSettings });
+      }
+      catch (err) {
+        console.error('Error: cannot dispatch settings,', err);
+      }
+    });
+  } catch (err) { }
 }
-
 
 // connected from target website (our injected agent)
 function handleExternalConnection(port) {
@@ -97,11 +110,11 @@ function handleExternalConnection(port) {
       saveSettings();
       dispatchSettings();
     }
-    else if(msg.startPlayback){
+    else if (msg.startPlayback) {
       console.log('Saturate icon')
       saturateActionIconForTab(tabId);
     }
-    else if(msg.stopPlayback){
+    else if (msg.stopPlayback) {
       console.log('Desaturate icon')
       desaturateActionIconForTab(tabId);
     }
@@ -116,42 +129,40 @@ function handleExternalConnection(port) {
   });
 }
 
-
 // connected from our pop-up page
 function handleInternalConnection(port) {
- const portName = port.name;
- console.log(`Connected: ${portName} (internal)`);
+  const portName = port.name;
+  console.log(`Connected: ${portName} (internal)`);
 
- if (portName === 'settings') {
-   port.postMessage({ settings: gSettings });
+  if (portName === 'settings') {
+    port.postMessage({ settings: gSettings });
 
-   port.onMessage.addListener(msg => {
-     if (!msg.settings) {
-       gSettings = Object.assign({}, kDefaultSettings);
-       port.postMessage({ settings: gSettings });
-     }
-     else {
-       console.log('Received: settings=', msg.settings);
-       let settings = Object.assign({}, gSettings);
-       settings = Object.assign(settings, msg.settings);
-       if (!validateSettings(settings)) {
-         gSettings = Object.assign({}, kDefaultSettings);
-         port.postMessage({ settings: gSettings });
-       }
-       else {
-         gSettings = settings;
-       }
-     }
-     saveSettings();
-     dispatchSettings();
-   });
- }
+    port.onMessage.addListener(msg => {
+      if (!msg.settings) {
+        gSettings = Object.assign({}, kDefaultSettings);
+        port.postMessage({ settings: gSettings });
+      }
+      else {
+        console.log('Received: settings=', msg.settings);
+        let settings = Object.assign({}, gSettings);
+        settings = Object.assign(settings, msg.settings);
+        if (!validateSettings(settings)) {
+          gSettings = Object.assign({}, kDefaultSettings);
+          port.postMessage({ settings: gSettings });
+        }
+        else {
+          gSettings = settings;
+        }
+      }
+      saveSettings();
+      dispatchSettings();
+    });
+  }
 
- port.onDisconnect.addListener(() => {
-   console.log(`Disconnected: ${portName} (internal)`);
- });
+  port.onDisconnect.addListener(() => {
+    console.log(`Disconnected: ${portName} (internal)`);
+  });
 }
-
 
 // handle connections from target website and our pop-up
 if (BROWSER === 'chrome') {

@@ -20,6 +20,7 @@ const kModulesDir = path.join(kProjectDir, 'node_modules');
 
 const browsers = ['chrome', 'firefox'];
 const configs = browsers.map(browser => {
+  const mver = browser === 'chrome' ? 'v3' : 'v2';
   const buildDir = path.join(kBuildDir, browser);
   return {
     mode: mode,
@@ -29,7 +30,7 @@ const configs = browsers.map(browser => {
     },
 
     entry: {
-      background: path.join(kSourceDir, 'background.js'),
+      service_worker: path.join(kSourceDir, 'service_worker.js'),
       content: path.join(kSourceDir, 'content.js'),
       settings: path.join(kSourceDir, 'settings.js'),
       nflxmultisubs: path.join(kSourceDir, 'nflxmultisubs.js'),
@@ -43,20 +44,22 @@ const configs = browsers.map(browser => {
       new CleanWebpackPlugin(),
       new CopyWebpackPlugin({
         patterns: [
-        {
-          from: path.join(kSourceDir, 'manifest.json'),
-          transform: (content, path) => Buffer.from(JSON.stringify({
-            short_name: PACKAGE.name,
-            description: PACKAGE.description,
-            version: PACKAGE.version,
-            ...JSON.parse(content.toString('utf-8'))
-          }, null, '\t')),
-        },
-        {
-          from: path.join(kSourceDir, '*.+(html|png|css)').replace(/\\/g, "/"),
-          to: "[name][ext]",
-        },
-      ]}),
+          {
+            from: path.join(kSourceDir, `manifest-${mver}.json`),
+            to: "manifest.json",
+            transform: (content, path) => Buffer.from(JSON.stringify({
+              short_name: PACKAGE.name,
+              description: PACKAGE.description,
+              version: PACKAGE.version,
+              ...JSON.parse(content.toString('utf-8'))
+            }, null, '\t')),
+          },
+          {
+            from: path.join(kSourceDir, '*.+(html|png|css)').replace(/\\/g, "/"),
+            to: "[name][ext]",
+          },
+        ]
+      }),
       new webpack.DefinePlugin({
         VERSION: JSON.stringify(PACKAGE.version),
         BROWSER: JSON.stringify(browser),

@@ -2,25 +2,16 @@ const console = require('./console');
 
 
 window.addEventListener('load', () => {
-  let scriptElem = document.createElement('script');
-  scriptElem.setAttribute('type', 'text/javascript');
-  scriptElem.textContent = `(() => {
-      window.__nflxMultiSubsExtId = ${JSON.stringify(chrome.runtime.id)};
-    })();`;
-  document.body.appendChild(scriptElem);
-
   const scriptsToInject = ['nflxmultisubs.min.js'];
   scriptsToInject.forEach(scriptName => {
     const scriptElem = document.createElement('script');
     scriptElem.setAttribute('type', 'text/javascript');
     scriptElem.setAttribute('src', chrome.runtime.getURL(scriptName));
+    scriptElem.setAttribute('id', chrome.runtime.id)
     document.head.appendChild(scriptElem);
     console.log(`Injected: ${scriptName}`);
   });
 });
-
-
-////////////////////////////////////////////////////////////////////////////////
 
 
 // Firefox: the target website (our injected agent) cannot connect to extensions
@@ -53,18 +44,18 @@ window.addEventListener('message', evt => {
   else if (evt.data.action === 'update-settings') {
     if (gMsgPort) {
       if (evt.data.settings) {
-        gMsgPort.postMessage({settings: evt.data.settings});
+        gMsgPort.postMessage({ settings: evt.data.settings });
       }
     }
   }
   else if (evt.data.action === 'startPlayback') {
     if (gMsgPort) {
-        gMsgPort.postMessage({ startPlayback: 1 });
+      gMsgPort.postMessage({ startPlayback: 1 });
     }
   }
   else if (evt.data.action === 'stopPlayback') {
     if (gMsgPort) {
-        gMsgPort.postMessage({ stopPlayback: 1 });
+      gMsgPort.postMessage({ stopPlayback: 1 });
     }
   }
 }, false);

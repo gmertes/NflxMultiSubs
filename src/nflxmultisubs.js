@@ -58,55 +58,68 @@ let gMsgPort, gRendererLoop;
 let gVideoRatio = 1080 / 1920;
 let gRenderOptions = Object.assign({}, kDefaultSettings);
 let gSecondaryOffset = 0; // used to move secondary subs if primary subs overflow the screen edge
+const extensionId = document.currentScript.id;
 
-(() => {
-  // connect with background script immediately so we can capture settings before playback (used for language mode)
-  if (BROWSER === 'chrome') {
-    if (gMsgPort) return;
-    try {
-      const extensionId = window.__nflxMultiSubsExtId;
-      gMsgPort = chrome.runtime.connect(extensionId);
-      console.log(`Linked: ${extensionId}`);
+function getMsgPort() {
+  if (gMsgPort) return gMsgPort;
 
-      gMsgPort.onMessage.addListener(msg => {
-        if (!msg.settings) return;
-        gRenderOptions = Object.assign({}, msg.settings);
+  gMsgPort = chrome.runtime.connect(extensionId);
+  console.log(`Linked: ${extensionId}`);
+
+  gMsgPort.onMessage.addListener(msg => {
+    if (!msg.settings) return;
+    gRenderOptions = Object.assign({}, msg.settings);
+    gRendererLoop && gRendererLoop.setRenderDirty();
+    console.log("Updated settings: ", gRenderOptions);
+  });
+
+  // This is a workaround for manifest v3.
+  // When the service worker is killed and disconnects, we force it to reopen so we can keep receiving setting updates from settings popup.
+  gMsgPort.onDisconnect.addListener(() => {
+    gMsgPort = null;
+    console.debug(`Reconnecting port...`);
+    getMsgPort();
+  });
+
+  return gMsgPort;
+}
+
+// connect with background script immediately to capture settings
+if (BROWSER === 'chrome') {
+  try {
+    getMsgPort();
+  } catch (err) {
+    console.warn('Error: cannot talk to background,', err);
+  }
+}
+
+// Firefox: this injected agent cannot talk to extension directly, thus the
+// connection (for applying settings) is relayed by our content script through
+// window.postMessage().
+
+if (BROWSER === 'firefox') {
+  window.addEventListener(
+    'message',
+    evt => {
+      if (!evt.data || evt.data.namespace !== 'nflxmultisubs') return;
+
+      if (evt.data.action === 'apply-settings' && evt.data.settings) {
+        gRenderOptions = Object.assign({}, evt.data.settings);
         gRendererLoop && gRendererLoop.setRenderDirty();
-      });
-    } catch (err) {
-      console.warn('Error: cannot talk to background,', err);
-    }
-    return;
+      }
+    },
+    false
+  );
+
+  try {
+    window.postMessage({
+      namespace: 'nflxmultisubs',
+      action: 'connect'
+    }, '*');
+  } catch (err) {
+    console.warn('Error: cannot talk to background,', err);
   }
-
-  // Firefox: this injected agent cannot talk to extension directly, thus the
-  // connection (for applying settings) is relayed by our content script through
-  // window.postMessage().
-
-  if (BROWSER === 'firefox') {
-    window.addEventListener(
-      'message',
-      evt => {
-        if (!evt.data || evt.data.namespace !== 'nflxmultisubs') return;
-
-        if (evt.data.action === 'apply-settings' && evt.data.settings) {
-          gRenderOptions = Object.assign({}, evt.data.settings);
-          gRendererLoop && gRendererLoop.setRenderDirty();
-        }
-      },
-      false
-    );
-
-    try {
-      window.postMessage({
-        namespace: 'nflxmultisubs',
-        action: 'connect'
-      }, '*');
-    } catch (err) {
-      console.warn('Error: cannot talk to background,', err);
-    }
-  }
-})();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -641,8 +654,11 @@ activateSubtitle = id => {
     gRenderOptions.secondaryLanguageLastUsedIsCaption = sub.isCaption;
 
     if (BROWSER === 'chrome') {
-      if (gMsgPort)
-        gMsgPort.postMessage({ settings: gRenderOptions });
+      try {
+        getMsgPort().postMessage({ settings: gRenderOptions });
+      } catch (err) {
+        console.warn('Cannot dispatch settings,', err);
+      }
     } else {
       // Firefox
       try {
@@ -884,8 +900,11 @@ class RendererLoop {
     this.isRunning = true;
     window.requestAnimationFrame(this.loop.bind(this));
     if (BROWSER === 'chrome') {
-      if (gMsgPort)
-        gMsgPort.postMessage({ startPlayback: 1 });
+      try {
+        getMsgPort().postMessage({ startPlayback: 1 });
+      } catch (err) {
+        console.warn('Cannot dispatch start playback,', err);
+      }
     } else {
       // Firefox
       try {
@@ -903,8 +922,12 @@ class RendererLoop {
     this.isRunning = false;
     this._clearSecondarySubtitles();
     if (BROWSER === 'chrome') {
-      if (gMsgPort)
-        gMsgPort.postMessage({ stopPlayback: 1 });
+      try {
+        getMsgPort().postMessage({ stopPlayback: 1 });
+      }
+      catch (err) {
+        console.warn('Cannot dispatch stop playback,', err);
+      }
     } else {
       // Firefox
       try {
