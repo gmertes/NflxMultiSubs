@@ -23,8 +23,16 @@ class PlaybackRateController {
 
   _keyUpHandler(evt) {
     if (evt.ctrlKey || evt.altKey || evt.metaKey || evt.shiftKey) return;
+    const allowedEventKeys = {
+      "playbackRateDecreaserKeys": ["[", "ğ"],
+      "playbackRateIncreaserKeys": ["]", "ü"]
+    };
+    const allowedEventCodes = {
+      "playbackRateDecreaserKeys": ["BracketLeft"],
+      "playbackRateIncreaserKeys": ["BracketRight"]
+    };
 
-    if (!['BracketLeft', 'BracketRight'].includes(evt.code) && !['[', ']'].includes(evt.key)) return;
+    if (!(Object.values(allowedEventCodes).flat().includes(evt.code) || Object.values(allowedEventKeys).flat().includes(evt.key))) return;
 
     const playerContainer = document.querySelector('.watch-video');
     if (!playerContainer) return;
@@ -33,8 +41,8 @@ class PlaybackRateController {
     if (!video) return;
 
     let playbackRate = video.playbackRate;
-    if (evt.code === 'BracketLeft' || evt.key === '[') playbackRate -= 0.1;
-    else if (evt.code === 'BracketRight' || evt.key === ']') playbackRate += 0.1;
+    if (allowedEventCodes.playbackRateDecreaserKeys.includes(t.code) || allowedEventKeys.playbackRateDecreaserKeys.includes(t.key)) playbackRate -= 0.1;
+    else if (allowedEventCodes.playbackRateIncreaserKeys.includes(t.code) || allowedEventKeys.playbackRateIncreaserKeys.includes(t.key)) playbackRate += 0.1;
 
     playbackRate = Math.max(Math.min(playbackRate, 3.0), 0.1);
     video.playbackRate = playbackRate;
