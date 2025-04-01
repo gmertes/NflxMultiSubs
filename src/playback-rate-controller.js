@@ -41,8 +41,8 @@ class PlaybackRateController {
     if (!video) return;
 
     let playbackRate = video.playbackRate;
-    if (allowedEventCodes.playbackRateDecreaserKeys.includes(t.code) || allowedEventKeys.playbackRateDecreaserKeys.includes(t.key)) playbackRate -= 0.1;
-    else if (allowedEventCodes.playbackRateIncreaserKeys.includes(t.code) || allowedEventKeys.playbackRateIncreaserKeys.includes(t.key)) playbackRate += 0.1;
+    if (allowedEventCodes.playbackRateDecreaserKeys.includes(evt.code) || allowedEventKeys.playbackRateDecreaserKeys.includes(evt.key)) playbackRate -= 0.1;
+    else if (allowedEventCodes.playbackRateIncreaserKeys.includes(evt.code) || allowedEventKeys.playbackRateIncreaserKeys.includes(evt.key)) playbackRate += 0.1;
 
     playbackRate = Math.max(Math.min(playbackRate, 3.0), 0.1);
     video.playbackRate = playbackRate;
