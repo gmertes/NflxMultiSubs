@@ -26,6 +26,7 @@ port.onMessage.addListener((msg) => {
 
   primaryPicker?.setColor(settings.primaryTextColor || "#ffffff", true);
   secondaryPicker?.setColor(settings.secondaryTextColor || "#ffffff", true);
+  console.log('Settings received:', settings);
 });
 
 // -----------------------------------------------------------------------------
@@ -173,6 +174,7 @@ function renderVersion() {
 window.addEventListener('load', evt => {
   renderVersion();
   renderActiveSettings();
+  console.log('Settings page loaded');
 
   // handle click events
   // ---------------------------------------------------------------------------

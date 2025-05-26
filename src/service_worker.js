@@ -1,5 +1,4 @@
 const kDefaultSettings = require('./default-settings');
-let gSettings = Object.assign({}, kDefaultSettings);
 
 // return true if valid; otherwise return false
 function validateSettings(settings) {
@@ -7,23 +6,47 @@ function validateSettings(settings) {
   return keys.every(key => (key in settings));
 }
 
-chrome.storage.local.get(['settings'], (result) => {
-  console.log('Loaded: settings=', result.settings);
-  if (result.settings && validateSettings(result.settings))
-    gSettings = result.settings;
-  else
-    saveSettings();
-});
-
-function saveSettings() {
-  // hack to update opacity for existing users
-  gSettings.primaryImageOpacity = 1
-  gSettings.primaryTextOpacity = 1
-  gSettings.secondaryImageOpacity = 1
-  gSettings.secondaryTextOpacity = 1
-  chrome.storage.local.set({ settings: gSettings }, () => {
-    console.log('Settings: saved into local storage');
+const loadSettings = async () => {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(['settings'], function (result) {
+      console.log('Loaded: settings=', result.settings);
+      if (result.settings && validateSettings(result.settings)) {
+        resolve(result.settings)
+      }
+      else {
+        saveSettings(kDefaultSettings);
+        resolve(kDefaultSettings);
+      }
+    });
   });
+};
+
+function saveSettings(settings) {
+  // hack to update opacity for existing users
+  settings.primaryImageOpacity = 1
+  settings.primaryTextOpacity = 1
+  settings.secondaryImageOpacity = 1
+  settings.secondaryTextOpacity = 1
+  chrome.storage.local.set({ settings: settings }, () => {
+    console.log('Settings: saved into local storage', settings);
+  });
+}
+
+// TODO: revisit this logic. 
+// The port is ephemeral in manifest v3, so keeping a map of ports is probably not useful.
+let gExtPorts = {}; // tabId -> msgPort; for config dispatching
+function dispatchSettings(settings) {
+  try {
+    const keys = Object.keys(gExtPorts);
+    keys.map(k => gExtPorts[k]).forEach(port => {
+      try {
+        port.postMessage({ settings: settings });
+      }
+      catch (err) {
+        console.error('Error: cannot dispatch settings,', err);
+      }
+    });
+  } catch (err) { }
 }
 
 function saturateActionIconForTab(tabId) {
@@ -68,31 +91,15 @@ function desaturateActionIconForTab(tabId) {
   }
 }
 
-// TODO: revisit this logic. 
-// The port is ephemeral in manifest v3, so keeping a map of ports is probably not useful.
-let gExtPorts = {}; // tabId -> msgPort; for config dispatching
-function dispatchSettings() {
-  try {
-    const keys = Object.keys(gExtPorts);
-    keys.map(k => gExtPorts[k]).forEach(port => {
-      try {
-        port.postMessage({ settings: gSettings });
-      }
-      catch (err) {
-        console.error('Error: cannot dispatch settings,', err);
-      }
-    });
-  } catch (err) { }
-}
-
 // connected from target website (our injected agent)
-function handleExternalConnection(port) {
+async function handleExternalConnection(port) {
   const tabId = port.sender && port.sender.tab && port.sender.tab.id;
   if (!tabId) return;
 
   gExtPorts[tabId] = port;
   console.log(`Connected: ${tabId} (tab)`);
 
+  var gSettings = await loadSettings();
   port.postMessage({ settings: gSettings });
 
   port.onMessage.addListener(msg => {
@@ -107,8 +114,8 @@ function handleExternalConnection(port) {
       else {
         gSettings = settings;
       }
-      saveSettings();
-      dispatchSettings();
+      saveSettings(gSettings);
+      dispatchSettings(gSettings);
     }
     else if (msg.startPlayback) {
       console.log('Saturate icon')
@@ -130,37 +137,41 @@ function handleExternalConnection(port) {
 }
 
 // connected from our pop-up page
-function handleInternalConnection(port) {
+async function handleInternalConnection(port) {
   const portName = port.name;
   console.log(`Connected: ${portName} (internal)`);
 
-  if (portName === 'settings') {
-    port.postMessage({ settings: gSettings });
+  port.onDisconnect.addListener(() => {
+    console.log(`Disconnected: ${portName} (internal)`);
+  });
 
-    port.onMessage.addListener(msg => {
-      if (!msg.settings) {
+  if (portName !== 'settings') return;
+
+  var gSettings = await loadSettings();
+  console.log('Dispatching settings to pop-up', gSettings);
+  port.postMessage({ settings: gSettings });
+
+  port.onMessage.addListener(msg => {
+    // this logic is a mess, a leftover from when gSettings was a global variable
+    // TODO: could use a refactor
+    if (!msg.settings) {
+      gSettings = Object.assign({}, kDefaultSettings);
+      port.postMessage({ settings: gSettings });
+    }
+    else {
+      console.log('Received: settings=', msg.settings);
+      let settings = Object.assign({}, gSettings);
+      settings = Object.assign(settings, msg.settings);
+      if (!validateSettings(settings)) {
         gSettings = Object.assign({}, kDefaultSettings);
         port.postMessage({ settings: gSettings });
       }
       else {
-        console.log('Received: settings=', msg.settings);
-        let settings = Object.assign({}, gSettings);
-        settings = Object.assign(settings, msg.settings);
-        if (!validateSettings(settings)) {
-          gSettings = Object.assign({}, kDefaultSettings);
-          port.postMessage({ settings: gSettings });
-        }
-        else {
-          gSettings = settings;
-        }
+        gSettings = settings;
       }
-      saveSettings();
-      dispatchSettings();
-    });
-  }
-
-  port.onDisconnect.addListener(() => {
-    console.log(`Disconnected: ${portName} (internal)`);
+    }
+    saveSettings(gSettings);
+    dispatchSettings(gSettings);
   });
 }
 
