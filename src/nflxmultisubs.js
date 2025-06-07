@@ -186,7 +186,7 @@ class SubtitleBase {
       this.urls.map(u => u.substr(0, 24)));
 
     return Promise.any(
-      this.urls.map(url => fetch(new Request(url), { method: 'HEAD' }))
+      this.urls.map(url => fetch(url, { method: 'HEAD' }))
     ).then(r => {
       const url = r.url;
       console.debug(`Fastest: ${url.substr(0, 24)}`);
