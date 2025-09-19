@@ -63,7 +63,12 @@ const extensionId = document.currentScript.id;
 function getMsgPort() {
   if (gMsgPort) return gMsgPort;
 
-  gMsgPort = chrome.runtime.connect(extensionId);
+  if (BROWSER !== 'safari') {
+    gMsgPort = chrome.runtime.connect(extensionId);
+  }
+  else {
+    gMsgPort = browser.runtime.connect(extensionId);
+  }
   console.log(`Linked: ${extensionId}`);
 
   gMsgPort.onMessage.addListener(msg => {
@@ -85,7 +90,7 @@ function getMsgPort() {
 }
 
 // connect with background script immediately to capture settings
-if (BROWSER === 'chrome') {
+if (BROWSER !== 'firefox') {
   try {
     getMsgPort();
   } catch (err) {
@@ -653,7 +658,7 @@ activateSubtitle = id => {
     gRenderOptions.secondaryLanguageLastUsed = sub.bcp47;
     gRenderOptions.secondaryLanguageLastUsedIsCaption = sub.isCaption;
 
-    if (BROWSER === 'chrome') {
+    if (BROWSER !== 'firefox') {
       try {
         getMsgPort().postMessage({ settings: gRenderOptions });
       } catch (err) {
@@ -899,7 +904,7 @@ class RendererLoop {
   start() {
     this.isRunning = true;
     window.requestAnimationFrame(this.loop.bind(this));
-    if (BROWSER === 'chrome') {
+    if (BROWSER !== 'firefox') {
       try {
         getMsgPort().postMessage({ startPlayback: 1 });
       } catch (err) {
@@ -921,7 +926,7 @@ class RendererLoop {
   stop() {
     this.isRunning = false;
     this._clearSecondarySubtitles();
-    if (BROWSER === 'chrome') {
+    if (BROWSER !== 'firefox') {
       try {
         getMsgPort().postMessage({ stopPlayback: 1 });
       }

@@ -176,7 +176,7 @@ async function handleInternalConnection(port) {
 }
 
 // handle connections from target website and our pop-up
-if (BROWSER === 'chrome') {
+if (BROWSER !== 'firefox') {
   chrome.runtime.onConnectExternal.addListener(
     port => handleExternalConnection(port));
 

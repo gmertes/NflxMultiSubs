@@ -44,7 +44,6 @@
     "default_icon": "icon-gray.png",
     "default_popup": "settings.html"
   },
-  "content_security_policy": {},
   "host_permissions": [
     "https://www.netflix.com/watch/*",
     "https://assets.nflxext.com/*"

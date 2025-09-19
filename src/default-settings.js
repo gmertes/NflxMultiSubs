@@ -18,8 +18,8 @@ const kDefaultSettings = {
   //    'last' (use last used language)
   secondaryLanguageMode: 'audio',
   // bcp47 code of the last used language
-  secondaryLanguageLastUsed: undefined,
-  secondaryLanguageLastUsedIsCaption: undefined,
+  secondaryLanguageLastUsed: '',
+  secondaryLanguageLastUsedIsCaption: false,
 };
 
 module.exports = kDefaultSettings;

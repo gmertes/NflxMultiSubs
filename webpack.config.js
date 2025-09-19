@@ -18,9 +18,14 @@ const kModulesDir = path.join(kProjectDir, 'node_modules');
 
 // -----------------------------------------------------------------------------
 
-const browsers = ['chrome', 'firefox'];
+const browsers = ['chrome', 'firefox', 'safari'];
+const manifests = {
+  chrome: 'v3',
+  firefox: 'v2-firefox',
+  safari: 'v2-safari',
+};
 const configs = browsers.map(browser => {
-  const mver = browser === 'chrome' ? 'v3' : 'v2';
+  const mver = manifests[browser];
   const buildDir = path.join(kBuildDir, browser);
   return {
     mode: mode,
