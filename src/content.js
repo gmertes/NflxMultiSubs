@@ -1,17 +1,21 @@
 const console = require('./console');
 
 
-window.addEventListener('load', () => {
+// Inject the page-realm agent as early as possible (document_start). The agent must override
+// window.JSON.parse BEFORE the Netflix player decrypts & parses its manifest. Otherwise we
+// miss the manifest, and the subtitle list stays empty.
+(() => {
   const scriptsToInject = ['nflxmultisubs.min.js'];
   scriptsToInject.forEach(scriptName => {
     const scriptElem = document.createElement('script');
     scriptElem.setAttribute('type', 'text/javascript');
     scriptElem.setAttribute('src', chrome.runtime.getURL(scriptName));
-    scriptElem.setAttribute('id', chrome.runtime.id)
-    document.head.appendChild(scriptElem);
+    scriptElem.setAttribute('id', chrome.runtime.id);
+    // documentElement always exists at document_start; head/body may not yet.
+    (document.head || document.documentElement).appendChild(scriptElem);
     console.log(`Injected: ${scriptName}`);
   });
-});
+})();
 
 
 // Firefox: the target website (our injected agent) cannot connect to extensions

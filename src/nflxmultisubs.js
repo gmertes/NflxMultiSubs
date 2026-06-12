@@ -435,10 +435,15 @@ class ImageSubtitle extends SubtitleBase {
 
 // -----------------------------------------------------------------------------
 
+// Netflix renamed several manifest fields here, mostly snake_case->camelCase around
+// playercore cadmium-0.0058. These are for backward compatible new->old fallback.
+const getDownloadables = track => track.downloadables || track.ttDownloadables || {};
+const getTrackId = track => (track.id !== undefined ? track.id : track.new_track_id);
+
 class SubtitleFactory {
   // track: manifest.textTracks[...]
   static build(track) {
-    const isImageBased = Object.values(track.ttDownloadables).some(d => d.isImage);
+    const isImageBased = Object.values(getDownloadables(track)).some(d => d.isImage);
     const isCaption = track.rawTrackType === 'closedcaptions';
     const lang = track.languageDescription + (isCaption ? ' [CC]' : '');
     const bcp47 = track.language;
@@ -461,10 +466,10 @@ class SubtitleFactory {
       return true;
     }
 
-    // "new_track_id" example "T:1:0;1;zh-Hant;1;1;"
+    // track id example "T:1:0;1;zh-Hant;1;1;"
     // the last bit is 1 for NoneTrack text tracks
     try {
-      const isNoneTrackBit = track.new_track_id.split(';')[4];
+      const isNoneTrackBit = getTrackId(track).split(';')[4];
       if (isNoneTrackBit === '1') {
         return true;
       }
@@ -480,13 +485,14 @@ class SubtitleFactory {
   }
 
   static _buildImageBased(track, lang, bcp47, isCaption) {
-    const maxHeight = Math.max(...Object.values(track.ttDownloadables).map(d => {
+    const downloadables = getDownloadables(track);
+    const maxHeight = Math.max(...Object.values(downloadables).map(d => {
       if (d.height)
         return d.height;
       else
         return -1;
     }));
-    const d = Object.values(track.ttDownloadables).find(d => d.height === maxHeight);
+    const d = Object.values(downloadables).find(d => d.height === maxHeight);
     let urls;
     if (d.downloadUrls) {
       urls = Object.values(d.downloadUrls);
@@ -498,7 +504,7 @@ class SubtitleFactory {
 
   static _buildTextBased(track, lang, bcp47, isCaption) {
     const targetProfile = 'dfxp-ls-sdh';
-    const d = track.ttDownloadables[targetProfile];
+    const d = getDownloadables(track)[targetProfile];
     if (!d) {
       console.debug(`Cannot find "${targetProfile}" for ${lang}`);
       return null;
@@ -528,7 +534,7 @@ const buildSubtitleList = textTracks => {
 
 // textTracks: manifest.textTracks
 const updateSubtitleList = (textTracks, textTrackId) => {
-  const track = textTracks.find(t => t.new_track_id == textTrackId),
+  const track = textTracks.find(t => getTrackId(t) == textTrackId),
     sub = SubtitleFactory.build(track),
     index = gSubtitles.findIndex(s => s.lang == sub.lang);
   if (gSubtitles[index] instanceof DehydratedSubtitle && sub !== null) {
@@ -645,7 +651,14 @@ const observerOptions = {
   childList: true,
   characterData: true
 };
-bodyObserver.observe(document.body, observerOptions);
+// At document_start, document.body may not exist yet; wait for it.
+if (document.body) {
+  bodyObserver.observe(document.body, observerOptions);
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    bodyObserver.observe(document.body, observerOptions);
+  });
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1247,9 +1260,15 @@ class NflxMultiSubsManager {
             return;
           }
 
+          // Field names below tolerate both the new camelCase manifest schema
+          // (cadmium-0.0058+) and the older snake_case one.
+          const textTracks = manifest.textTracks || manifest.timedtexttracks;
+          const recommendedTextTrackId = manifest.recommendedMedia &&
+            (manifest.recommendedMedia.textTrackId || manifest.recommendedMedia.timedTextTrackId);
+
           const movieChanged = manifest.movieId !== this.lastMovieId;
           if (!movieChanged) {
-            updateSubtitleList(manifest.timedtexttracks, manifest.recommendedMedia.timedTextTrackId);
+            updateSubtitleList(textTracks, recommendedTextTrackId);
             console.log(`Manifest ${manifest.movieId} updated`);
             return;
           }
@@ -1258,7 +1277,7 @@ class NflxMultiSubsManager {
           this.lastMovieId = manifest.movieId;
 
           // For cadmium-playercore-6.0012.183.041.js and later
-          gSubtitles = buildSubtitleList(manifest.timedtexttracks);
+          gSubtitles = buildSubtitleList(textTracks);
 
           // select subtitle based on language settings
           console.log('Language mode: ', gRenderOptions.secondaryLanguageMode);
@@ -1270,8 +1289,9 @@ class NflxMultiSubsManager {
             case 'audio':
               try {
                 // There is also manifest.recommendedMedia.audioTrackId, but it just points to the track with isNative == true
-                const defaultAudioTrack = manifest.audio_tracks.find(t => t.isNative == true);
-                const defaultAudioLanguage = (defaultAudioTrack) ? defaultAudioTrack.language : manifest.audio_tracks[0].language; // fall back to first track if isNative fails
+                const audioTracks = manifest.audioTracks || manifest.audio_tracks;
+                const defaultAudioTrack = audioTracks.find(t => t.isNative == true);
+                const defaultAudioLanguage = (defaultAudioTrack) ? defaultAudioTrack.language : audioTracks[0].language; // fall back to first track if isNative fails
                 console.log(`Default audio track language: ${defaultAudioLanguage}`);
                 const autoSubtitleId = gSubtitles.findIndex(t => t.bcp47 == defaultAudioLanguage);
                 if (autoSubtitleId >= 0) {
@@ -1310,7 +1330,7 @@ class NflxMultiSubsManager {
 
           // retrieve video ratio
           try {
-            let { maxWidth, maxHeight } = manifest.video_tracks[0];
+            let { maxWidth, maxHeight } = (manifest.videoTracks || manifest.video_tracks)[0];
             gVideoRatio = maxHeight / maxWidth;
           }
           catch (err) {
