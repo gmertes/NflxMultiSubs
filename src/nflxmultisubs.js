@@ -866,6 +866,12 @@ class PrimaryTextTransformer {
         font-size: ${newFontSize}px !important;
         opacity: ${opacity};
         color: ${color} !important;
+      }
+
+      .player-timedtext-text-container ruby rt span {
+        font-size: ${newFontSize * 0.5}px !important;
+        opacity: ${opacity};
+        color: ${color} !important;
       }`;
     style.textContent = styleText;
 
