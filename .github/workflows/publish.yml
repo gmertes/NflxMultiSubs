@@ -5,7 +5,7 @@ on:
     types: [ created ]
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,28 +22,47 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: archives
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            source.zip
+
+  publish-chrome:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: archives
 
       - name: Get zip path
-        run: |
-          echo "ZIP_CHROME=dist/$(ls dist | grep chrome)" >> $GITHUB_ENV
-          echo "ZIP_FF=dist/$(ls dist | grep firefox)" >> $GITHUB_ENV
+        run: echo "ZIP_CHROME=dist/$(ls dist | grep chrome)" >> $GITHUB_ENV
 
-      - name: Upload to Chrome Web Store
-        uses: mobilefirstllc/cws-publish@latest
+      - uses: wdzeng/chrome-extension@v2
         with:
-          action: 'upload'
-          client_id: ${{ secrets.CHROME_ID }}
-          client_secret: ${{ secrets.CHROME_SECRET }}
-          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          extension_id: 'jepfhfjlkgobooomdgpcjikalfpcldmm'
-          zip_file: ${{ env.ZIP_CHROME }}
+          action: upload
+          extension-id: jepfhfjlkgobooomdgpcjikalfpcldmm
+          zip-path: ${{ env.ZIP_CHROME }}
+          publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
-      - name: Upload to Firefox Add-ons
-        uses: yayuyokitano/firefox-addon@v0.0.6-alpha
+  publish-firefox:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          api_key: ${{ secrets.FF_ISSUER }}
-          api_secret: ${{ secrets.FF_SECRET }}
-          guid: '{7c45e7c9-80ff-4f7f-93b3-da64baf0c6dd}'
-          xpi_path: ${{ env.ZIP_FF }}
-          src_path: source.zip
+          name: archives
+
+      - name: Get zip path
+        run: echo "ZIP_FF=dist/$(ls dist | grep firefox)" >> $GITHUB_ENV
+
+      - uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: '{7c45e7c9-80ff-4f7f-93b3-da64baf0c6dd}'
+          xpi-path: ${{ env.ZIP_FF }}
+          self-hosted: false
+          source-file-path: source.zip
+          jwt-issuer: ${{ secrets.FF_ISSUER }}
+          jwt-secret: ${{ secrets.FF_SECRET }}
